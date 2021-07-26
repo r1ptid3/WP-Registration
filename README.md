@@ -11,7 +11,7 @@ Below will be described all important steps to customize plugin.
 - Reset password form shortcode [r1_reset-pass-form]
 
 # Structure
-Plugin structure based on "wppb.me" boilerplate and written used OOP
+Plugin structure based on "wppb.me" boilerplate and written used OOP.
 
 # Admin
 Admin part extended with code that shows and saves user custom meta fields on "Dashboard -> Users" page.
