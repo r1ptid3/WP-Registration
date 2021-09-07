@@ -45,17 +45,29 @@ class R1_Registration_Admin {
 	private string $version;
 
 	/**
+	 * Define array which contains all registration form fields.
+	 *
+	 * @since    1.1.0
+	 *
+	 * @access   protected
+	 * @var      array $registration_form_fields - The array which contains all registration form fields.
+	 */
+	private array $registration_form_fields;
+
+	/**
 	 * Initialize the class and set its properties.
 	 *
 	 * @since    1.0.0
 	 *
 	 * @param    string $plugin_name - The name of this plugin.
 	 * @param    string $version - The version of this plugin.
+	 * @param    array $registration_form_fields - registration form fields.
 	 */
-	public function __construct( string $plugin_name, string $version ) {
+	public function __construct( string $plugin_name, string $version, array $registration_form_fields ) {
 
-		$this->plugin_name = $plugin_name;
-		$this->version     = $version;
+		$this->plugin_name              = $plugin_name;
+		$this->version                  = $version;
+		$this->registration_form_fields = $registration_form_fields;
 
 	}
 
@@ -90,17 +102,122 @@ class R1_Registration_Admin {
 	 */
 	public function r1_custom_user_profile_fields( object $user ) {
 		?>
-			<h2><?php esc_html_e( 'Custom Fields', 'r1_registration' ); ?></h2>
-			<table class="form-table">
-				<tr>
-					<th>
-						<label for="full_name"><?php esc_html_e( 'Full Name', 'r1_registration' ); ?></label>
-					</th>
-					<td>
-						<input type="text" name="full_name" id="full_name" value="<?php echo esc_attr( get_the_author_meta( 'full_name', $user->ID ) ); ?>" class="regular-text" />
-					</td>
-				</tr>
+
+			<h2><?php esc_html_e( 'Custom Registration Fields', 'r1_registration' ); ?></h2>
+
+				<table class="form-table r1-registration-table">
+
+				<?php
+
+				foreach ( $this->registration_form_fields as $id => $field ) {
+
+					if ( 'email' !== $field['type'] && 'password' !== $field['type'] ) {
+
+						?>
+
+						<tr>
+							<th>
+								<?php if ( ! empty( $field['label'] ) ) : ?>
+
+								<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $field['label'] ); ?></label>
+
+								<?php endif; ?>
+							</th>
+							<td>
+
+							<?php
+
+							$output = '';
+
+							// Configure tag.
+							switch ( $field['type'] ) {
+
+								case 'select':
+									$multiple = true === $field['multiple'] ? 'multiple' : '';
+									$selected = '';
+
+									$output .= '<select type="' . $field['type'] . '" id="' . $id . '" name="' . $id . '[]" ' . $multiple . '>';
+
+									if ( ! empty( $field['options'] ) ) {
+
+										foreach ( $field['options'] as $val => $text ) {
+
+											// Check is anything choosen.
+											if ( ! empty( get_the_author_meta( $id, $user->ID ) ) ) {
+
+												// Check is option selected.
+												if (
+													( ! empty( $multiple ) && is_array( get_the_author_meta( $id, $user->ID ) ) && in_array( $val, get_the_author_meta( $id, $user->ID ), true ) ) ||
+													( empty( $multiple ) && get_the_author_meta( $id, $user->ID ) === $val )
+												) {
+													$selected = 'selected';
+												} else {
+													$selected = '';
+												}
+											}
+
+											$output .= '<option value="' . $val . '" ' . $selected . '>' . $text . '</option>';
+
+										}
+									}
+
+									$output .= '</select>';
+
+									break;
+
+								case 'textarea':
+									$output .= '<textarea type="' . $field['type'] . '" id="' . $id . '" name="' . $id . '">' . esc_html( get_the_author_meta( $id, $user->ID ) ) . '</textarea>';
+
+									break;
+
+								case 'radio':
+									if ( ! empty( $field['options'] ) ) {
+										foreach ( $field['options'] as $val => $text ) {
+											$output .= '<div class="radio-item">';
+
+												$checked = get_the_author_meta( $id, $user->ID ) === $val ? 'checked' : '';
+
+												$output .= '<input id="' . $val . '" value="' . $val . '" type="radio" name="' . $id . '" ' . $checked . '>';
+												$output .= '<label class="radio-label" for="' . $val . '">' . $text . '</label>';
+
+											$output .= '</div>';
+										}
+									}
+
+									break;
+
+								case 'checkbox':
+									$checked_on  = 'on' === get_the_author_meta( $id, $user->ID ) ? 'checked' : '';
+									$checked_off = '' === get_the_author_meta( $id, $user->ID ) ? 'checked' : '';
+
+									$output .= '<input type="hidden" id="' . $id . '_custom" name="' . $id . '" value="off" ' . $checked_off . ' />';
+									$output .= '<input type="' . $field['type'] . '" id="' . $id . '" name="' . $id . '" value="on" ' . $checked_on . ' />';
+
+									break;
+
+								default:
+									// Default input.
+									$output .= '<input class="regular-text" type="' . $field['type'] . '" id="' . $id . '" name="' . $id . '" value="' . get_the_author_meta( $id, $user->ID ) . '" />';
+
+									break;
+							}
+
+							// phpcs:ignore
+							echo $output;
+
+							?>
+
+							</td>
+						</tr>
+
+						<?php
+					}
+				}
+
+				?>
+
 			</table>
+
 			<?php wp_nonce_field( 'r1_registration_nonce', '_r1_registration_nonce', false ); ?>
 		<?php
 	}
@@ -116,17 +233,41 @@ class R1_Registration_Admin {
 
 		// Check for nonce otherwise bail.
 		if (
+			! current_user_can( 'edit_user', $user_id ) ||
 			! isset( $_POST['_r1_registration_nonce'] ) ||
 			! wp_verify_nonce( $_POST['_r1_registration_nonce'], 'r1_registration_nonce' ) //phpcs:ignore.
 		) {
 			return;
 		}
 
-		$full_name = ! empty( $_POST['full_name'] ) ? sanitize_text_field( wp_unslash( $_POST['full_name'] ) ) : '';
+		foreach ( $this->registration_form_fields as $id => $field ) {
 
-		if ( current_user_can( 'edit_user', $user_id ) ) {
-			update_user_meta( $user_id, 'full_name', $full_name );
+			switch ( $field['type'] ) {
+
+				case 'select':
+					if ( true === $field['multiple'] ) {
+						// Update multiple select.
+						if ( ! empty( $_POST[ $id ] ) ) {
+							update_user_meta( $user_id, $id, $_POST[ $id ] ); //phpcs:ignore.
+						}
+					} else {
+						// Update default select.
+						if ( ! empty( $_POST[ $id ][0] ) ) {
+							update_user_meta( $user_id, $id, sanitize_text_field( wp_unslash( $_POST[ $id ][0] ) ) );
+						}
+					}
+
+					break;
+
+				default:
+					if ( ! empty( $_POST[ $id ] ) ) {
+						update_user_meta( $user_id, $id, sanitize_text_field( wp_unslash( $_POST[ $id ] ) ) );
+					}
+
+					break;
+			}
 		}
+
 	}
 
 }

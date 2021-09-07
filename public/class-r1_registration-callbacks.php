@@ -20,6 +20,27 @@ declare( strict_types = 1 );
 class R1_Registration_Callbacks {
 
 	/**
+	 * Define array which contains all registration form fields.
+	 *
+	 * @since    1.1.0
+	 *
+	 * @access   protected
+	 * @var      array $registration_form_fields - The array which contains all registration form fields.
+	 */
+	private array $registration_form_fields;
+
+	/**
+	 * Define the core functionality of the plugin.
+	 *
+	 * @since    1.1.0
+	 *
+	 * @param    array $registration_form_fields - registration form fields.
+	 */
+	public function __construct( array $registration_form_fields ) {
+		$this->registration_form_fields = $registration_form_fields;
+	}
+
+	/**
 	 * Creating new user function
 	 *
 	 * @since    1.0.0
@@ -37,42 +58,84 @@ class R1_Registration_Callbacks {
 		// Create WP_Error object.
 		$errors = new WP_Error();
 
-		// Get fields from parsed $_POST.
-		$user_name             = $array['userFullName'];
-		$user_email            = $array['userEmail'];
-		$user_password         = $array['userPassword'];
-		$user_password_confirm = $array['userPasswordConfirm'];
+		// Create passwords variable.
+		$user_password         = false;
+		$user_password_confirm = false;
 
-		// Validate user email & existance.
-		$errors = $this->verify_user( $user_email, true );
+		// Processing required fields.
+		foreach ( $this->registration_form_fields as $id => $field ) {
 
-		// Validate passwords.
-		$errors = $this->verify_passwords( $user_password, $user_password_confirm );
+			if ( isset( $field['required'] ) && true === $field['required'] ) {
 
-		// Create new user. wp_insert_user will sanitize all data by itself.
-		if ( ! empty( $user_email ) && ! empty( $user_password ) ) {
+				if ( 'email' === $field['type'] ) {
 
-			$userdata = array(
-				'user_login' => $user_email,
-				'user_pass'  => $user_password,
-				'user_email' => $user_email,
-			);
+					$user_email = $array[ $id ];
 
-			$user_id = wp_insert_user( $userdata );
+					// Validate user email & existance.
+					$errors = $this->verify_user( $errors, $array[ $id ], true );
 
-			// Check for errors.
-			if ( is_wp_error( $user_id ) ) {
+				} elseif ( 'password' === $field['type'] ) {
 
-				$errors->add( 'user_error', $user_id->get_error_message() );
+					if ( isset( $field['is_confirmation'] ) && true === $field['is_confirmation'] ) {
+						$user_password_confirm = $array[ $id ];
+					} else {
+						$user_password = $array[ $id ];
+					}
 
+					// Validate passwords.
+					if ( false !== $user_password && false !== $user_password_confirm ) {
+						$errors = $this->verify_passwords( $errors, $user_password, $user_password_confirm );
+					}
+
+				} else {
+
+					// Create error message.
+					if ( ! empty( $field['error_msg'] ) ) {
+						$error_msg = $field['error_msg'];
+					} else {
+						$field_name = ! empty( $field['label'] ) ? $field['label'] : $field['placeholder'];
+						$error_msg  = $field_name . esc_html__( ' is required field', 'r1_registration' );
+					}
+
+					// Add error into errors object.
+					if ( empty( $array[ $id ] ) ) {
+						$errors->add( $id . '_error', $error_msg );
+					}
+				}
 			}
 		}
 
 		// Show errors and die if any exist.
-		$this->error_helper_handler( $errors );
+		$this->check_and_show_errors_handler( $errors, false );
+
+		// Create new user. wp_insert_user will sanitize all data by itself.
+		$userdata = array(
+			'user_login' => $user_email,
+			'user_pass'  => $user_password,
+			'user_email' => $user_email,
+		);
+
+		$user_id = wp_insert_user( $userdata );
+
+		// Check for errors.
+		if ( is_wp_error( $user_id ) ) {
+
+			$errors->add( 'user_email_error', $user_id->get_error_message() );
+
+		}
+
+		// Show errors and die if any exist or complete with success status.
+		$this->check_and_show_errors_handler( $errors, true );
 
 		// Update all optional user meta fields.
-		update_user_meta( $user_id, 'full_name', $user_name );
+		foreach ( $this->registration_form_fields as $id => $field ) {
+
+			if ( 'email' !== $field['type'] && 'password' !== $field['type'] ) {
+
+				update_user_meta( $user_id, $id, $array[ $id ] );
+
+			}
+		}
 
 		wp_die();
 	}
@@ -98,12 +161,12 @@ class R1_Registration_Callbacks {
 
 		// Get fields from parsed $_POST.
 		$creds                  = array();
-		$creds['user_login']    = wp_unslash( $array['email'] );
-		$creds['user_password'] = $array['password'];
+		$creds['user_login']    = wp_unslash( $array['user_email'] );
+		$creds['user_password'] = $array['user_password'];
 		$creds['remember']      = false;
 
 		// Verify user.
-		$this->verify_user( $creds['user_login'], false );
+		$this->verify_user( $errors, $creds['user_login'], false );
 
 		// Get user object.
 		$user = get_user_by( 'login', $creds['user_login'] );
@@ -111,11 +174,12 @@ class R1_Registration_Callbacks {
 		// Validate password.
 		if ( ! wp_check_password( $creds['user_password'], $user->user_pass, $user->ID ) ) {
 
-			$errors->add( 'invalid_pass', __( 'The password you entered is incorrect', 'r1_registration' ) );
-
-			$this->error_helper_handler( $errors );
+			$errors->add( 'user_password_error', __( 'The password you entered is incorrect', 'r1_registration' ) );
 
 		}
+
+		// Show errors and die if any exist.
+		$this->check_and_show_errors_handler( $errors, false );
 
 		// Sign in account by credentials.
 		$user = wp_signon( $creds, true );
@@ -123,11 +187,12 @@ class R1_Registration_Callbacks {
 		// Check for errors.
 		if ( is_wp_error( $user ) ) {
 
-			$errors->add( 'other_error', __( 'Please check login or password', 'r1_registration' ) );
+			$errors->add( 'all_fields_error', __( 'Please check login or password', 'r1_registration' ) );
 
 		}
 
-		$this->error_helper_handler( $errors );
+		// Show errors and die if any exist or complete with success status.
+		$this->check_and_show_errors_handler( $errors, true );
 
 		wp_die();
 	}
@@ -155,20 +220,21 @@ class R1_Registration_Callbacks {
 		$errors = new WP_Error();
 
 		// Get fields from parsed $_POST.
-		$user_login = $array['user_login'];
+		$user_login = $array['user_email'];
 
 		// Validate entered email.
-		$this->verify_user( $user_login, false );
+		$this->verify_user( $errors, $user_login, false );
 
 		// Get user object.
 		$user_data = get_user_by( 'email', trim( $user_login ) );
 
 		// Validate user.
 		if ( empty( $user_data ) || ! $user_data ) {
-			$errors->add( 'invalid_email', __( 'There is no user registered with that email address.', 'r1_registration' ) );
-
-			$this->error_helper_handler( $errors );
+			$errors->add( 'user_email_error', __( 'There is no user registered with that email address.', 'r1_registration' ) );
 		}
+
+		// Show errors and die if any exist.
+		$this->check_and_show_errors_handler( $errors, false );
 
 		/**
 		 * Fires before errors are returned from a password reset request.
@@ -244,8 +310,8 @@ class R1_Registration_Callbacks {
 			$errors->add( 'could_not_sent', __( 'The e-mail could not be sent.', 'r1_registration' ) . "<br />\n" . __( 'Possible reason: your host may have disabled the mail() function.', 'r1_registration' ), 'message' );
 		}
 
-		// Show errors and die if any exist.
-		$this->error_helper_handler( $errors );
+		// Show errors and die if any exist or complete with success status.
+		$this->check_and_show_errors_handler( $errors, true );
 
 		wp_die();
 	}
@@ -270,10 +336,10 @@ class R1_Registration_Callbacks {
 		$errors = new WP_Error();
 
 		// Get fields from parsed $_POST.
-		$pass1 = $array['pass1'];
-		$pass2 = $array['pass2'];
+		$pass1 = $array['user_password'];
+		$pass2 = $array['user_password_confirm'];
 		$key   = $array['user_key'];
-		$login = sanitize_email( $array['user_login'] );
+		$login = sanitize_email( $array['user_email'] );
 
 		$user = check_password_reset_key( $key, $login );
 
@@ -292,8 +358,8 @@ class R1_Registration_Callbacks {
 		// Reset password for a user.
 		reset_password( $user, $pass1 );
 
-		// Show errors and die if any exist.
-		$this->error_helper_handler( $errors );
+		// Show errors and die if any exist or complete with success status.
+		$this->check_and_show_errors_handler( $errors, true );
 
 		wp_die();
 	}
@@ -302,33 +368,25 @@ class R1_Registration_Callbacks {
 	/**
 	 * Check is passwords are equal.
 	 *
-	 * @param    string $pass1 - Password.
-	 * @param    string $pass2 - Password Confirmation.
+	 * @param    object $errors  - Errors object.
+	 * @param    string $pass1   - Password.
+	 * @param    string $pass2   - Password Confirmation.
 	 *
 	 * @since    1.0.0
 	 */
-	public function verify_passwords( string $pass1, string $pass2 ) {
-
-		$errors = new WP_Error();
+	public function verify_passwords( object $errors, string $pass1, string $pass2 ) {
 
 		if ( empty( $pass1 ) || empty( $pass2 ) ) {
 
-			$errors->add( 'password_error', __( 'One or both passwords are empty', 'r1_registration' ) );
+			$errors->add( 'user_passwords_error', __( 'One or both passwords are empty', 'r1_registration' ) );
 
 		} elseif ( $pass1 !== $pass2 ) {
 
-			$errors->add( 'password_error', __( 'Passwords do not match.', 'r1_registration' ) );
+			$errors->add( 'user_passwords_error', __( 'Passwords do not match.', 'r1_registration' ) );
 
 		} elseif ( strlen( $pass1 ) < 6 ) {
 
-			$errors->add( 'password_error', __( 'Password is too short', 'r1_registration' ) );
-
-		}
-
-		// If errors isset.
-		if ( ! empty( $errors->errors ) ) {
-
-			$this->error_helper_handler( $errors );
+			$errors->add( 'user_password_error', __( 'Password is too short', 'r1_registration' ) );
 
 		}
 
@@ -339,24 +397,23 @@ class R1_Registration_Callbacks {
 	/**
 	 * Check entered email.
 	 *
-	 * @param    string $email - Email that will be verified.
-	 * @param    bool   $free  - Make sure that email is free.
+	 * @param    object $errors  - Errors object.
+	 * @param    string $email   - Email that will be verified.
+	 * @param    bool   $free    - Make sure that email is free.
 	 *
 	 * @since    1.0.0
 	 */
-	public function verify_user( string $email, $free = false ) {
+	public function verify_user( object $errors, string $email, bool $free = false ) {
 
 		$email = trim( $email );
 
-		$errors = new WP_Error();
-
 		if ( empty( $email ) ) {
 
-			$errors->add( 'user_error', __( 'Email is empty', 'r1_registration' ) );
+			$errors->add( 'user_email_error', __( 'Email is empty', 'r1_registration' ) );
 
 		} elseif ( ! is_email( $email ) ) {
 
-			$errors->add( 'user_error', __( 'Please enter valid email', 'r1_registration' ) );
+			$errors->add( 'user_email_error', __( 'Please enter valid email', 'r1_registration' ) );
 		}
 
 		if (
@@ -364,21 +421,14 @@ class R1_Registration_Callbacks {
 			( username_exists( $email ) || email_exists( $email ) )
 		) {
 
-			$errors->add( 'user_error', __( 'This email is already used', 'r1_registration' ) );
+			$errors->add( 'user_email_error', __( 'This email is already used', 'r1_registration' ) );
 
 		} elseif (
 			! $free &&
 			( ! username_exists( $email ) && ! email_exists( $email ) )
 		) {
 
-			$errors->add( 'user_error', __( 'There is no user registered with that email address.', 'r1_registration' ) );
-
-		}
-
-		// If errors isset.
-		if ( ! empty( $errors->errors ) ) {
-
-			$this->error_helper_handler( $errors );
+			$errors->add( 'user_email_error', __( 'There is no user registered with that email address.', 'r1_registration' ) );
 
 		}
 
@@ -387,16 +437,18 @@ class R1_Registration_Callbacks {
 	}
 
 	/**
-	 * Checking nonce for security!
+	 * Show errors helper handler function.
 	 *
-	 * @param    array $errors - Errors array.
+	 * @param    object $errors - Errors object.
+	 * @param    bool   $final  - Show success status.
 	 *
-	 * @since    1.0.0
+	 * @since    1.1.0
 	 */
-	public function error_helper_handler( $errors ) : void {
+	public function check_and_show_errors_handler( object $errors, bool $final = false ) {
 
 		if ( $errors->get_error_code() ) {
 
+			// Collecting all errors into proper array.
 			$errors_arr = array();
 
 			foreach ( $errors->get_error_codes() as $error ) {
@@ -413,7 +465,7 @@ class R1_Registration_Callbacks {
 
 			wp_die();
 
-		} else {
+		} elseif ( true === $final ) {
 
 			// Complete the execution with success status.
 			echo wp_json_encode(
@@ -423,6 +475,6 @@ class R1_Registration_Callbacks {
 			);
 
 		}
-	}
 
+	}
 }

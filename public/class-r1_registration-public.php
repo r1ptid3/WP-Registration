@@ -84,7 +84,7 @@ class R1_Registration_Public {
 			'wp_ajax',
 			array(
 				'ajax_url' => admin_url( 'admin-ajax.php' ),
-				'nonce'   => wp_create_nonce( 'nonce-ajax-security' ),
+				'nonce'    => wp_create_nonce( 'nonce-ajax-security' ),
 			)
 		);
 

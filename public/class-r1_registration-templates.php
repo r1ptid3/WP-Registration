@@ -19,6 +19,26 @@ declare( strict_types = 1 );
  */
 class R1_Registration_Templates {
 
+	/**
+	 * Define array which contains all registration form fields.
+	 *
+	 * @since    1.1.0
+	 *
+	 * @access   protected
+	 * @var      array $registration_form_fields - The array which contains all registration form fields.
+	 */
+	private array $registration_form_fields;
+
+	/**
+	 * Define the core functionality of the plugin.
+	 *
+	 * @since    1.1.0
+	 *
+	 * @param    array $registration_form_fields - registration form fields.
+	 */
+	public function __construct( array $registration_form_fields ) {
+		$this->registration_form_fields = $registration_form_fields;
+	}
 
 	/**
 	 * Registration form HTML output.
@@ -33,29 +53,11 @@ class R1_Registration_Templates {
 
 		<form id="registrationForm" class="registration" novalidate>
 
-			<div class="input-wrapper">
-				<label for="userFullName"><?php esc_html_e( 'ПІБ', 'r1_registration' ); ?></label>
-				<input id="userFullName" type="text" name="userFullName"/>
-			</div>
-
-			<div class="input-wrapper">
-				<label for="userEmail"><?php esc_html_e( 'Email', 'r1_registration' ); ?></label>
-				<input id="userEmail" type="email" name="userEmail"/>
-			</div>
-
-			<div class="input-wrapper">
-				<label for="userPassword"><?php esc_html_e( 'Пароль', 'r1_registration' ); ?></label>
-				<input id="userPassword" type="password" name="userPassword"/>
-			</div>
-
-			<div class="input-wrapper">
-				<label for="userPasswordConfirm"><?php esc_html_e( 'Повторити пароль', 'r1_registration' ); ?></label>
-				<input id="userPasswordConfirm" type="password" name="userPasswordConfirm"/>
-			</div>
+			<?php $this->create_registration_form_html(); ?>
 
 			<ul class="form-errors"></ul>
 
-			<button type="submit" class="button"><?php esc_html_e( 'Відправити', 'r1_registration' ); ?></button>
+			<button type="submit" class="button"><?php esc_html_e( 'Register', 'r1_registration' ); ?></button>
 
 		</form>
 
@@ -81,22 +83,23 @@ class R1_Registration_Templates {
 		<form id="loginForm" novalidate>
 
 			<div class="input-wrapper">
-				<label for="email"><?php esc_html_e( 'Email', 'r1_registration' ); ?></label>
-				<input id="userEmail" type="email" name="email" />
+				<label for="user_email"><?php esc_html_e( 'Email', 'r1_registration' ); ?></label>
+				<input id="user_email" type="email" name="user_email" />
 			</div>
 
 			<div class="input-wrapper">
-				<label for="password"><?php esc_html_e( 'Пароль', 'r1_registration' ); ?></label>
-				<input id="password" type="password" name="password"/>
+				<label for="user_password"><?php esc_html_e( 'Password', 'r1_registration' ); ?></label>
+				<input id="user_password" type="password" name="user_password"/>
+				<a href="javascript:;" class="toggle-password"></a>
 			</div>
 
 			<ul class="form-errors"></ul>
 
 			<a href="<?php echo get_site_url() . '/forgot-password'; ?>">
-				<?php esc_html_e( 'Забули пароль?', 'r1_registration' ); ?>
+				<?php esc_html_e( 'Forgot Password?', 'r1_registration' ); ?>
 			</a>
 
-			<button type="submit" class="button"><?php esc_html_e( 'Увійти', 'r1_registration' ); ?></button>
+			<button type="submit" class="button"><?php esc_html_e( 'Log in', 'r1_registration' ); ?></button>
 
 		</form>
 
@@ -122,8 +125,8 @@ class R1_Registration_Templates {
 		<form id="forgotPasswordForm" novalidate>
 
 			<div class="input-wrapper">
-				<label for="user_login"><?php esc_html_e( 'Email', 'r1_registration' ); ?></label>
-				<input id="user_login" type="text" name="user_login" required>
+				<label for="user_email"><?php esc_html_e( 'Email', 'r1_registration' ); ?></label>
+				<input id="user_email" type="text" name="user_email" required>
 			</div>
 
 			<?php
@@ -139,13 +142,13 @@ class R1_Registration_Templates {
 
 			<ul class="form-errors"></ul>
 
-			<p class="form-success" style="display: none;">Check your email and follow the instructions.</p>
+			<p class="form-success" style="display: none;"><?php esc_html_e( 'Check your email and follow the instructions.', 'r1_registration' ) ?></p>
 
 			<a href="<?php echo esc_url( get_site_url() ) . '/login'; ?>">
-				<?php esc_html_e( 'Згадали пароль?', 'r1_registration' ); ?>
+				<?php esc_html_e( 'Remember Password?', 'r1_registration' ); ?>
 			</a>
 
-			<button type="submit" class="button"><?php esc_html_e( 'Увійти', 'r1_registration' ); ?></button>
+			<button type="submit" class="button"><?php esc_html_e( 'Send', 'r1_registration' ); ?></button>
 
 		</form>
 
@@ -202,18 +205,18 @@ class R1_Registration_Templates {
 			<form id="resetPasswordForm" method="post" autocomplete="off" novalidate>
 
 				<input type="hidden" name="user_key" id="user_key" value="<?php echo esc_attr( $key ); ?>" autocomplete="off" />
-				<input type="hidden" name="user_login" id="user_login" value="<?php echo esc_attr( $login ); ?>" autocomplete="off" />
+				<input type="hidden" name="user_email" id="user_email" value="<?php echo esc_attr( $login ); ?>" autocomplete="off" />
 
 				<div class="input-wrapper">
-					<label for="pass1"><?php esc_html_e( 'Пароль', 'r1_registration' ); ?></label>
-					<input id="pass1" type="password" name="pass1" autocomplete="off" />
-					<a href="javascript:;" class="toggle-password">Show password</a>
+					<label for="user_password"><?php esc_html_e( 'Password', 'r1_registration' ); ?></label>
+					<input id="user_password" type="password" name="user_password" autocomplete="off" />
+					<a href="javascript:;" class="toggle-password"></a>
 				</div>
 
 				<div class="input-wrapper">
-					<label for="pass2"><?php esc_html_e( 'Повторіть Пароль', 'r1_registration' ); ?></label>
-					<input id="pass2" type="password" name="pass2" autocomplete="off" />
-					<a href="javascript:;" class="toggle-password">Show password</a>
+					<label for="user_password_confirm"><?php esc_html_e( 'Confirm Password', 'r1_registration' ); ?></label>
+					<input id="user_password_confirm" type="password" name="user_password_confirm" autocomplete="off" />
+					<a href="javascript:;" class="toggle-password"></a>
 				</div>
 
 				<?php
@@ -226,7 +229,7 @@ class R1_Registration_Templates {
 					do_action( 'resetpass_form', $user );
 				?>
 
-				<button type="submit" class="button"><?php esc_html_e( 'Змінити', 'r1_registration' ); ?></button>
+				<button type="submit" class="button"><?php esc_html_e( 'Change Password', 'r1_registration' ); ?></button>
 
 			</form>
 
@@ -237,6 +240,85 @@ class R1_Registration_Templates {
 		endif;
 
 		return $out;
+
+	}
+
+	/**
+	 * Function which forming registration form HTML.
+	 *
+	 * @since    1.1.0
+	 */
+	public function create_registration_form_html() {
+
+		$out = '';
+
+		foreach ( $this->registration_form_fields as $id => $field ) {
+
+			$out .= '<div class="input-wrapper ' . $field['type'] . '">';
+
+			if ( ! empty( $field['label'] ) ) {
+				$out .= '<label for="' . $id . '">' . $field['label'] . '</label>';
+			}
+
+			$placeholder = ! empty( $field['placeholder'] ) ? 'placeholder="' . $field['placeholder'] . '"' : '';
+
+			// Configure tag.
+			switch ( $field['type'] ) {
+
+				case 'select':
+
+					if ( true === $field['multiple'] ) {
+						$out .= '<select type="' . $field['type'] . '" id="' . $id . '" name="' . $id . '[]" multiple>';
+					} else {
+						$out .= '<select type="' . $field['type'] . '" id="' . $id . '" name="' . $id . '">';
+					}
+
+					if ( ! empty( $field['options'] ) ) {
+						foreach ( $field['options'] as $val => $text ) {
+							$out .= '<option value="' . $val . '">' . $text . '</option>';
+						}
+					}
+
+					$out .= '</select>';
+
+					break;
+
+				case 'textarea':
+					$out .= '<textarea type="' . $field['type'] . '" id="' . $id . '" name="' . $id . '" ' . $placeholder . '></textarea>';
+					break;
+
+				case 'radio':
+					if ( ! empty( $field['options'] ) ) {
+						foreach ( $field['options'] as $val => $text ) {
+							$out .= '<div class="radio-item">';
+
+								$out .= '<input id="' . $val . '" value="' . $val . '" type="radio" name="' . $id . '">';
+								$out .= '<label class="radio-label" for="' . $val . '">' . $text . '</label>';
+
+							$out .= '</div>';
+						}
+					}
+
+					break;
+
+				case 'password':
+					$out .= '<input type="' . $field['type'] . '" id="' . $id . '" name="' . $id . '" ' . $placeholder . ' >';
+					$out .= '<a href="javascript:;" class="toggle-password"></a>';
+
+					break;
+
+				default:
+					// Default input.
+					$out .= '<input type="' . $field['type'] . '" id="' . $id . '" name="' . $id . '" ' . $placeholder . ' />';
+
+					break;
+			}
+
+			$out .= '</div>';
+
+		}
+
+		echo $out;
 
 	}
 

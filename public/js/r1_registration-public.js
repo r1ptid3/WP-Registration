@@ -57,6 +57,8 @@
 							// Show errors
 							for ( const [key, value] of Object.entries( response.errors ) ) {
 								errors.show().append('<li>' + value + '</li>');
+
+								r1_hightlightField(key);
 							}
 
 						}
@@ -120,16 +122,16 @@
 
 				            // console.log(response.errors, );
 				            for ( const [key, value] of Object.entries(response.errors) ) {
-
 				            	errors.show().append('<li>' + value + '</li>');
 
+				            	r1_hightlightField(key);
 				            }
 
 				        }
 
 				    },
 				    error: function (error) {
-				        console.log('error', JSON.parse(error));
+				        console.log( 'error', error );
 				    }
 				});
 
@@ -159,6 +161,7 @@
 
 				// Clear all errors before new iteration
 				errors.empty();
+				successMessage.hide();
 
 				// Forming data for the POST query
 				let data = {
@@ -295,6 +298,31 @@
 			}
 
 		});
+
+	}
+
+
+	/**
+	 * Hightlight field with errors.
+	 *
+	 * @since    1.0.0
+	 */
+	function r1_hightlightField ( key ) {
+
+		console.log(key);
+
+		key = key.substring( 0, key.length - 6 );
+
+		let parent = $('#'+key).parent();
+
+		if ( 'user_passwords' === key ) {
+			parent = $('#user_password, #user_password_confirm').parent();
+		}
+
+		console.log(key);
+		console.log(parent);
+
+		parent.addClass('has-error');
 
 	}
 

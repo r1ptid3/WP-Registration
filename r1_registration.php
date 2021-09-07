@@ -8,7 +8,7 @@
  * @wordpress-plugin
  * Plugin Name:       R1 Registration Plugin
  * Description:       Starter registration WordPress Plugin
- * Version:           1.0.0
+ * Version:           1.1.0
  * Author:            r1ptid3
  * Author URI:        https://github.com/r1ptid3
  * License:           GNU General Public License v2 or later
@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Currently plugin version.
-define( 'R1_REGISTRATION_VERSION', '1.0.0' );
+define( 'R1_REGISTRATION_VERSION', '1.1.0' );
 
 /**
  * The code that runs during plugin activation.

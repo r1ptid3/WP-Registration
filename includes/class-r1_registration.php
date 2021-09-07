@@ -53,6 +53,16 @@ class R1_Registration {
 	protected string $version;
 
 	/**
+	 * Define array which contains all registration form fields.
+	 *
+	 * @since    1.1.0
+	 *
+	 * @access   protected
+	 * @var      array $registration_form_fields - The array which contains all registration form fields.
+	 */
+	protected array $registration_form_fields;
+
+	/**
 	 * Define the core functionality of the plugin.
 	 *
 	 * @since    1.0.0
@@ -66,6 +76,92 @@ class R1_Registration {
 		}
 
 		$this->plugin_name = 'r1_registration';
+
+		$this->registration_form_fields = array(
+			'user_full_name' => array(
+				'type'        => 'text',
+				'label'       => esc_html__( 'Full Name', 'r1_registration' ),
+				'placeholder' => esc_html__( 'Placeholder', 'r1_registration' ),
+				'required'    => true,
+				'error_msg'   => esc_html__( 'Full Name is required', 'r1_registration' ),
+			),
+			// Required field!
+			'user_email' => array(
+				'type'        => 'email',
+				'label'       => esc_html__( 'Email', 'r1_registration' ),
+				'placeholder' => esc_html__( 'Placeholder', 'r1_registration' ),
+				'required'    => true,
+			),
+			// Required field!
+			'user_password' => array(
+				'type'        => 'password',
+				'label'       => esc_html__( 'Password', 'r1_registration' ),
+				'placeholder' => esc_html__( 'Placeholder', 'r1_registration' ),
+				'required'    => true,
+			),
+			// Required field!
+			'user_password_confirm' => array(
+				'type'            => 'password',
+				'label'           => esc_html__( 'Password', 'r1_registration' ),
+				'placeholder'     => esc_html__( 'Placeholder', 'r1_registration' ),
+				'required'        => true,
+				'is_confirmation' => true,
+			),
+			'user_city' => array(
+				'type'      => 'select',
+				'label'     => esc_html__( 'City', 'r1_registration' ),
+				'multiple'  => false,
+				'required'  => true,
+				'error_msg' => esc_html__( 'Please select your city', 'r1_registration' ),
+				'options'   => array(
+					''          => '',
+					'mykolayiv' => 'Mykolayiv',
+					'kiev'      => 'Kiev',
+					'odessa'    => 'Odessa',
+					'vinitsya'  => 'Vinitsya',
+				),
+			),
+			'user_hobbies' => array(
+				'type'     => 'select',
+				'label'    => esc_html__( 'Hobbies', 'r1_registration' ),
+				'multiple' => true,
+				'required' => false,
+				'options'  => array(
+					''           => '',
+					'tennis'     => 'Tennis',
+					'baseball'   => 'Baseball',
+					'basketball' => 'Basketball',
+					'football'   => 'Football',
+				),
+			),
+			'user_message' => array(
+				'type'        => 'textarea',
+				'label'       => esc_html__( 'Message', 'r1_registration' ),
+				'placeholder' => esc_html__( 'Placeholder', 'r1_registration' ),
+				'required'    => true,
+			),
+			'user_gender' => array(
+				'type'      => 'radio',
+				'label'     => esc_html__( 'Gender', 'r1_registration' ),
+				'required'  => true,
+				'error_msg' => esc_html__( 'Please select your gender', 'r1_registration' ),
+				'options'   => array(
+					'male'   => 'Male',
+					'female' => 'Female',
+				),
+			),
+			'user_privacy' => array(
+				'type'      => 'checkbox',
+				'label'     => esc_html__( 'Privacy Policy', 'r1_registration' ),
+				'required'  => true,
+				'error_msg' => esc_html__( 'Accepting Privacy Policy is required', 'r1_registration' ),
+			),
+			'user_messaging' => array(
+				'type'      => 'checkbox',
+				'label'     => esc_html__( 'Receive advertising on email', 'r1_registration' ),
+				'required'  => false,
+			),
+		);
 
 		$this->load_dependencies();
 		$this->set_locale();
@@ -160,7 +256,7 @@ class R1_Registration {
 	 */
 	private function define_admin_hooks() {
 
-		$plugin_admin = new R1_Registration_Admin( $this->get_plugin_name(), $this->get_version() );
+		$plugin_admin = new R1_Registration_Admin( $this->get_plugin_name(), $this->get_version(), $this->get_registration_form_fields() );
 
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
@@ -190,8 +286,8 @@ class R1_Registration {
 	private function define_public_hooks() {
 
 		$plugin_public    = new R1_Registration_Public( $this->get_plugin_name(), $this->get_version() );
-		$plugin_callbacks = new R1_Registration_Callbacks();
-		$plugin_templates = new R1_Registration_Templates();
+		$plugin_callbacks = new R1_Registration_Callbacks( $this->get_registration_form_fields() );
+		$plugin_templates = new R1_Registration_Templates( $this->get_registration_form_fields() );
 
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
@@ -258,6 +354,17 @@ class R1_Registration {
 	 */
 	public function get_version() {
 		return $this->version;
+	}
+
+	/**
+	 * Retrieve the registration form fields.
+	 *
+	 * @since     1.1.0
+	 *
+	 * @return    string - The version number of the plugin.
+	 */
+	public function get_registration_form_fields() {
+		return $this->registration_form_fields;
 	}
 
 }
