@@ -8,7 +8,7 @@ Below will be described all important steps to customize plugin.
 
 ### Shortcodes:
 - Registration form shortcode [r1_registration-form]
-- Login form shortcode [r1-login-form]
+- Login form shortcode [r1_login-form]
 - Forgot password form shortcode [r1_forgot-pass-form]
 - Reset password form shortcode [r1_reset-pass-form]
 
